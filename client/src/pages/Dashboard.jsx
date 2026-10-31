@@ -79,7 +79,7 @@ function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 lg:px-10 py-10">
+      <main className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
 
         {/* Top Cards */}
         <div className="grid lg:grid-cols-3 gap-8 mb-10">
@@ -182,7 +182,7 @@ function Dashboard() {
 
             </div>
           ) : (
-            <div className="grid gap-5">
+            <div className="grid grid-cols-1 gap-4 w-full">
               {files.map((file) => (
                 <FileCard
                   key={file._id}
