@@ -1,4 +1,3 @@
-
 import {
   FaFileAlt,
   FaFilePdf,
@@ -8,67 +7,83 @@ import {
   FaEye,
 } from "react-icons/fa";
 
+import api from "../services/api";
+
 function FileCard({ file, onDelete }) {
   const formatSize = (size) => {
     if (!size) return "0 B";
-    if (size < 1024) return `${size} B`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`;
+
+    if (size < 1024) {
+      return `${size} B`;
+    }
+
+    if (size < 1024 * 1024) {
+      return `${(size / 1024).toFixed(2)} KB`;
+    }
+
     return `${(size / (1024 * 1024)).toFixed(2)} MB`;
   };
 
   const isImage = file.fileType?.startsWith("image/");
   const isPdf = file.fileType === "application/pdf";
 
-  
-const handleDownload = async () => {
-  try {
-    const token = localStorage.getItem("token");
+  // ===============================
+  // Download File
+  // ===============================
+  const handleDownload = async () => {
+    try {
+      // Use shared Axios instance:
+      // - Uses VITE_API_URL
+      // - Adds the Bearer token automatically
+      const response = await api.get(
+        `/files/${file._id}/download`,
+        {
+          responseType: "blob",
+        }
+      );
 
-    const response = await fetch(
-      `https://file-management-system-7wy.onrender.com/api/files/${file._id}/download`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+      // Convert response into a downloadable Blob
+      const blob = new Blob([response.data], {
+        type: file.fileType || "application/octet-stream",
+      });
 
-    if (!response.ok) {
-      throw new Error(`Download failed: ${response.status}`);
-    }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = file.fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Download error:", error);
-    alert(error.message);
-  }
-};
-
-      // If the backend returns a file, download it as a Blob.
-      const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
 
       const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = file.fileName || "download";
+
       document.body.appendChild(link);
       link.click();
       link.remove();
 
-      window.URL.revokeObjectURL(downloadUrl);
+      // Release temporary URL after browser starts download
+      setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+      }, 1000);
     } catch (error) {
       console.error("Download error:", error);
-      alert(error.message || "Unable to download file");
+
+      let message = "Unable to download file";
+
+      if (error.response) {
+        message = `Download failed: ${error.response.status}`;
+
+        if (error.response.data instanceof Blob) {
+          try {
+            const errorText = await error.response.data.text();
+            const errorData = JSON.parse(errorText);
+
+            message = errorData.message || message;
+          } catch {
+            // Keep default error message
+          }
+        }
+      } else if (error.message) {
+        message = error.message;
+      }
+
+      alert(message);
     }
   };
 
@@ -91,6 +106,7 @@ const handleDownload = async () => {
             <h3 className="break-all text-lg font-semibold text-white">
               {file.fileName}
             </h3>
+
             <p className="mt-1 text-sm text-blue-200">
               {formatSize(file.fileSize)}
             </p>
@@ -112,6 +128,7 @@ const handleDownload = async () => {
 
           {/* Download */}
           <button
+            type="button"
             onClick={handleDownload}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 py-3 font-medium text-white transition hover:bg-green-500"
           >
@@ -121,6 +138,7 @@ const handleDownload = async () => {
 
           {/* Delete */}
           <button
+            type="button"
             onClick={() => onDelete(file._id)}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3 font-medium text-white transition hover:bg-red-500"
           >
