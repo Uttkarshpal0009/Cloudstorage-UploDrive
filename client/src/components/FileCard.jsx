@@ -19,23 +19,40 @@ function FileCard({ file, onDelete }) {
   const isImage = file.fileType?.startsWith("image/");
   const isPdf = file.fileType === "application/pdf";
 
-  const handleDownload = async () => {
-    try {
-      const token = localStorage.getItem("token");
+  
+const handleDownload = async () => {
+  try {
+    const token = localStorage.getItem("token");
 
-      const response = await fetch(
-        `https://file-management-system-7wy.onrender.com/api/files/${file._id}/download`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Download failed. Please login again.");
+    const response = await fetch(
+      `https://file-management-system-7wy.onrender.com/api/files/${file._id}/download`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Download error:", error);
+    alert(error.message);
+  }
+};
 
       // If the backend returns a file, download it as a Blob.
       const blob = await response.blob();
