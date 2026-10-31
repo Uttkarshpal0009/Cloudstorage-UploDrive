@@ -1,4 +1,3 @@
-
 import File from "../models/File.js";
 import cloudinary from "../config/cloudinary.js";
 
@@ -67,9 +66,9 @@ export const getFiles = async (req, res) => {
 // ===============================
 // Download File
 // ===============================
-
 export const downloadFile = async (req, res) => {
   try {
+    // Find file in MongoDB
     const file = await File.findById(req.params.id);
 
     if (!file) {
@@ -79,7 +78,7 @@ export const downloadFile = async (req, res) => {
       });
     }
 
-    // Check file ownership
+    // Verify file ownership
     if (file.user.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -87,19 +86,23 @@ export const downloadFile = async (req, res) => {
       });
     }
 
-    // Fetch the file from Cloudinary
+    // Fetch file from Cloudinary
     const cloudinaryResponse = await fetch(file.fileUrl);
 
     if (!cloudinaryResponse.ok || !cloudinaryResponse.body) {
-      console.error("Cloudinary error:", cloudinaryResponse.status);
+      console.error(
+        "Cloudinary response:",
+        cloudinaryResponse.status,
+        cloudinaryResponse.statusText
+      );
 
       return res.status(502).json({
         success: false,
-        message: "Could not retrieve file from Cloudinary",
+        message: "Unable to retrieve file from Cloudinary",
       });
     }
 
-    // Set download headers
+    // Set file content type
     res.setHeader(
       "Content-Type",
       cloudinaryResponse.headers.get("content-type") ||
@@ -107,16 +110,18 @@ export const downloadFile = async (req, res) => {
         "application/octet-stream"
     );
 
+    // Set download filename
+    const safeFileName = file.fileName.replace(/["\\]/g, "_");
+
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${file.fileName.replace(/"/g, "")}"`
+      `attachment; filename="${safeFileName}"`
     );
 
-    // Stream file to browser
+    // Stream Cloudinary file to browser
     const { Readable } = await import("node:stream");
 
     Readable.fromWeb(cloudinaryResponse.body).pipe(res);
-
   } catch (error) {
     console.error("DOWNLOAD ERROR:", error);
 
@@ -126,42 +131,8 @@ export const downloadFile = async (req, res) => {
         message: "Unable to download file",
       });
     }
-  }
-};
 
-    // Determine Cloudinary resource type
-    let resourceType = "image";
-
-    if (
-      file.fileType.startsWith("application/") ||
-      file.fileType.startsWith("text/")
-    ) {
-      resourceType = "raw";
-    }
-
-    // Generate signed Cloudinary download URL
-    const extension = file.fileName.split(".").pop();
-
-    const downloadUrl =
-      cloudinary.utils.private_download_url(
-        file.publicId,
-        extension,
-        {
-          resource_type: resourceType,
-          type: "upload",
-        }
-      );
-
-    // Redirect to signed download URL
-    return res.redirect(downloadUrl);
-
-  } catch (error) {
-    console.error("DOWNLOAD ERROR:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to download file",
-    });
+    res.end();
   }
 };
 
@@ -209,7 +180,6 @@ export const deleteFile = async (req, res) => {
       success: true,
       message: "File deleted successfully",
     });
-
   } catch (error) {
     console.error("DELETE FILE ERROR:", error);
 
