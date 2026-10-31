@@ -1,15 +1,21 @@
+
 import express from "express";
+
 import protect from "../middleware/authMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
+
 import {
   uploadFile,
   getFiles,
+  downloadFile,
   deleteFile,
 } from "../controllers/fileController.js";
 
 const router = express.Router();
 
+// ===============================
 // Upload File
+// ===============================
 router.post(
   "/upload",
   protect,
@@ -17,9 +23,31 @@ router.post(
   uploadFile
 );
 
+// ===============================
 // Get All Files of Logged-in User
-router.get("/", protect, getFiles);
+// ===============================
+router.get(
+  "/",
+  protect,
+  getFiles
+);
 
-router.delete("/:id", protect, deleteFile);
+// ===============================
+// Download File
+// ===============================
+router.get(
+  "/:id/download",
+  protect,
+  downloadFile
+);
+
+// ===============================
+// Delete File
+// ===============================
+router.delete(
+  "/:id",
+  protect,
+  deleteFile
+);
 
 export default router;
